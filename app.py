@@ -3,12 +3,13 @@ import time
 import random
 import asyncio
 import logging
+from aiohttp import web
 from pyrogram import Client, filters, idle
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 from pyrogram.errors import FloodWait
 
-#  1. Disable ALL Logging for Zero I/O Lag
+#  1. Disable ALL Logging for Zero Lag
 logging.disable(logging.CRITICAL)
 
 # --- Environment Variables ---
@@ -27,7 +28,7 @@ KEYWORD = ""
 DELAY_SEC = 0.0
 
 if not all([API_ID, API_HASH, SESSION_STRING, BOT_TOKEN, OWNER_ID]):
-    print("Error: Required Environment Variables match ဖြစ်မနေပါ။")
+    print("Error: Required Environment Variables missing!")
     exit(1)
 
 # --- High-Speed Engine Setup ---
@@ -37,7 +38,7 @@ userbot = Client(
     api_hash=API_HASH,
     session_string=SESSION_STRING,
     in_memory=True,
-    ipv6=True,  #  Direct Direct-Route for Lowest Ping
+    ipv6=True,  #  Direct Route for Lower Ping
     workdir="/tmp",
     max_concurrent_transmissions=50
 )
@@ -53,6 +54,19 @@ bot = Client(
 )
 
 owner_filter = filters.user(OWNER_ID)
+
+#  Render Free Web Service Health-Check Server
+async def handle_healthcheck(request):
+    return web.Response(text="Render Free Bot Engine Live!")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", handle_healthcheck)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
 
 async def notify_owner_bg(chat_title: str, word: str, latency_ms: float):
     try:
@@ -73,25 +87,21 @@ async def notify_owner_bg(chat_title: str, word: str, latency_ms: float):
 
 @userbot.on_message(filters.group)
 async def ultra_fast_snipe(client: Client, message: Message):
-    # Fast Validation 1: Source check
     sender_chat = message.sender_chat or message.forward_from_chat
     if not sender_chat:
         return
 
-    # Fast Validation 2: Target Match
     if TARGET_IDS or TARGET_USERNAMES:
         c_id = sender_chat.id
         c_user = sender_chat.username.lower() if sender_chat.username else ""
         if c_id not in TARGET_IDS and c_user not in TARGET_USERNAMES:
             return
 
-    # Fast Validation 3: Keyword Check
     if KEYWORD:
         text = message.text or message.caption or ""
         if KEYWORD not in text.lower():
             return
 
-    # Optional Delay
     if DELAY_SEC > 0:
         await asyncio.sleep(DELAY_SEC)
 
@@ -99,7 +109,6 @@ async def ultra_fast_snipe(client: Client, message: Message):
         return
     chosen_word = random.choice(WORDS)
 
-    #  HOT PATH: Instant message sending without text parsing lag
     t_start = time.perf_counter()
     try:
         await client.send_message(
@@ -112,7 +121,6 @@ async def ultra_fast_snipe(client: Client, message: Message):
         t_end = time.perf_counter()
         latency_ms = (t_end - t_start) * 1000
 
-        # Background Non-Blocking Notification
         asyncio.create_task(notify_owner_bg(sender_chat.title or "Channel", chosen_word, latency_ms))
 
     except FloodWait as e:
@@ -130,7 +138,7 @@ async def ultra_fast_snipe(client: Client, message: Message):
 @bot.on_message(filters.command("start") & owner_filter)
 async def start_cmd(client: Client, message: Message):
     menu = (
-        " **Pro FCM Sniper Control Panel (Singapore SG)**\n\n"
+        " **Pro FCM Sniper Control Panel (Render SG Free)**\n\n"
         " **Target Commands:**\n"
         " `/addtarget @channel` သို့ `/addtarget -100xxxx` - Target ထည့်ရန်\n"
         " `/deltarget @channel` - Target ဖြုတ်ရန်\n"
@@ -301,14 +309,7 @@ async def status_cmd(client: Client, message: Message):
 async def main():
     await userbot.start()
     await bot.start()
-    
-    # Fast Peer Cache Warmup
-    try:
-        async for dialog in userbot.get_dialogs(limit=50):
-            pass
-    except Exception:
-        pass
-
+    await start_web_server()  #  Render Port Pass ဖြစ်ရန် Server စတင်ခြင်း
     await idle()
 
 if __name__ == "__main__":
